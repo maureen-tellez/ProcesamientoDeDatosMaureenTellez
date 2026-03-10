@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reconocimiento de Números</title>
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 30px;
+    }
+
+    canvas {
+      border: 2px solid black;
+      background: white;
+      cursor: crosshair;
+    }
+
+    #resultado {
+      margin-top: 20px;
+      font-size: 40px;
+      font-weight: bold;
+    }
+
+    button {
+      margin: 10px;
+      padding: 10px 18px;
+      font-size: 16px;
+      background-color: #ffcbfb;
+    }
+  </style>
+</head>
+<body>
+    <div class="container" style="background-color: #c5adc3;">
+        <h1 style="font-weight: 600; color: white;">Dibuja un número</h1>
+    </div>
+
+  <canvas id="canvas" width="280" height="280"></canvas>
+  <br>
+  <button onclick="limpiarCanvas()">Limpiar</button>
+  <button onclick="predecir()">Predecir</button>
+
+  <div id="resultado">?</div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    let dibujando = false;
+
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    //pincel
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 20;
+    ctx.lineCap = "round";
+
+    // liisteners para dibujar
+    canvas.addEventListener("mousedown", () => {
+      dibujando = true;
+      ctx.beginPath();
+    });
+
+    canvas.addEventListener("mouseup", () => {
+      dibujando = false;
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      dibujando = false;
+    });
+
+    canvas.addEventListener("mousemove", dibujar);
+
+    //funcion para dibujar
+    function dibujar(event) {
+      if (!dibujando) return;
+
+      //obtener coordenadas del mouse
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+
+    function limpiarCanvas() {
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      document.getElementById("resultado").innerHTML = "?";
+    }
+
+    function predecir() {
+      // Crear canvas temporal de 28x28
+      const smallCanvas = document.createElement("canvas");
+      smallCanvas.width = 28;
+      smallCanvas.height = 28;
+      const smallCtx = smallCanvas.getContext("2d");
+
+      smallCtx.drawImage(canvas, 0, 0, 28, 28);
+
+      let pixels = [];
+
+      for (let x = 0; x < 28; x++) {
+        for (let y = 0; y < 28; y++) {
+          let imgData = smallCtx.getImageData(y, x, 1, 1);
+          let data = imgData.data;
+
+          // usar canal alpha / color normalizado
+          let color = (255 - data[0]) / 255;
+          color = (Math.round(color * 100) / 100).toFixed(2);
+          pixels.push(color);
+        }
+      }
+
+      // Enviar datos al servidor
+      $.post("http://localhost:8000", {pixeles: pixels.join(",")},
+        function(response) {
+          console.log("Resultado: " + response);
+          $("#resultado").html(response);
+        }
+      );
+    }
+  </script>
+
+</body>
+</html>
